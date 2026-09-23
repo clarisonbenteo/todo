@@ -13,6 +13,7 @@ type Task = {
   position: number;
   tags: string[];
   due_date: string | null;
+  created_at: string;
 };
 type Column = { id: string; title: string; color: string; taskIds: string[] };
 type BoardData = {
@@ -210,8 +211,11 @@ export default function KanbanBoard() {
     return date < today;
   };
 
-  const formatDate = (dateString: string) => {
-    const [year, month, day] = dateString.split('-');
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
     return `${day}/${month}`;
   };
 
@@ -275,24 +279,29 @@ export default function KanbanBoard() {
                                 zIndex: snapshot.isDragging ? 100 : 1
                               }}
                             >
-                              <div className="card-title">{task.title}</div>
-                              {task.description && <div className="card-desc">{task.description}</div>}
-                              
-                              {(task.tags?.length > 0 || task.due_date) && (
-                                <div className="card-footer">
+                              <div className="card-header">
+                                <div className="card-title">{task.title}</div>
+                                {task.tags?.length > 0 && (
                                   <div className="tag-list">
-                                    {task.tags?.map((tag, i) => (
+                                    {task.tags.map((tag, i) => (
                                       <span key={i} className="tag">{tag}</span>
                                     ))}
                                   </div>
-                                  {task.due_date && (
-                                    <div className={`due-date ${isOverdue(task.due_date) ? 'overdue' : ''}`}>
-                                      <Calendar size={12} />
-                                      {formatDate(task.due_date)}
-                                    </div>
-                                  )}
+                                )}
+                              </div>
+                              {task.description && <div className="card-desc">{task.description}</div>}
+                              
+                              <div className="card-footer">
+                                <div className="created-date">
+                                  {formatDate(task.created_at)}
                                 </div>
-                              )}
+                                {task.due_date && (
+                                  <div className={`due-date ${isOverdue(task.due_date) ? 'overdue' : ''}`}>
+                                    <Calendar size={12} />
+                                    {formatDate(task.due_date)}
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           )}
                         </Draggable>

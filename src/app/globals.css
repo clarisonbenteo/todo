@@ -147,9 +147,17 @@ body {
   border-color: var(--card-hover-border);
 }
 
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
 .card-title {
   font-weight: 500;
   line-height: 1.4;
+  flex: 1;
 }
 
 .card-desc {
@@ -161,14 +169,17 @@ body {
 .card-footer {
   display: flex;
   justify-content: space-between;
-  align-items: flex-end;
-  margin-top: 0.25rem;
+  align-items: center;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed var(--card-border);
 }
 
 .tag-list {
   display: flex;
   flex-wrap: wrap;
   gap: 0.25rem;
+  justify-content: flex-end;
 }
 
 .tag {
@@ -180,7 +191,7 @@ body {
   font-weight: 500;
 }
 
-.due-date {
+.due-date, .created-date {
   font-size: 0.7rem;
   color: var(--text-muted);
   display: flex;
