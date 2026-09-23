@@ -363,9 +363,6 @@ export default function KanbanBoard() {
                             >
                               <div className="card-header">
                                 <div className="card-title">{task.title}</div>
-                                <div className="edit-btn" onClick={() => openEditTaskModal(task)} title="Editar Tarefa">
-                                  <Edit2 size={12} />
-                                </div>
                               </div>
                               {task.description && <div className="card-desc">{task.description}</div>}
                               
@@ -373,13 +370,18 @@ export default function KanbanBoard() {
                                 <div className="created-date">
                                   {formatDate(task.created_at)}
                                 </div>
-                                {task.tags?.length > 0 && (
-                                  <div className="tag-list">
-                                    <span className={`tag priority-${task.tags[0].replace('é', 'e')}`}>
-                                      {task.tags[0]}
-                                    </span>
+                                <div className="footer-center">
+                                  {task.tags?.length > 0 && (
+                                    <div className="tag-list">
+                                      <span className={`tag priority-${task.tags[0].replace('é', 'e')}`}>
+                                        {task.tags[0]}
+                                      </span>
+                                    </div>
+                                  )}
+                                  <div className="edit-btn" onClick={() => openEditTaskModal(task)} title="Editar Tarefa">
+                                    <Edit2 size={12} />
                                   </div>
-                                )}
+                                </div>
                                 <div className="due-date-wrapper">
                                   {task.due_date && (
                                     <div className={`due-date ${isOverdue(task.due_date) ? 'overdue' : ''}`}>

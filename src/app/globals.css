@@ -190,10 +190,19 @@ body {
   justify-content: flex-end;
 }
 
+.footer-center {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+}
+
 .edit-btn {
   position: absolute;
-  top: -4px;
-  right: -4px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   background: var(--card-bg);
   border: 1px solid var(--card-border);
   border-radius: 50%;
@@ -213,7 +222,7 @@ body {
 .edit-btn:hover {
   color: var(--foreground);
   border-color: var(--card-hover-border);
-  transform: scale(1.1);
+  transform: translate(-50%, -50%) scale(1.1);
 }
 
 .task-card:hover .tag-list {
