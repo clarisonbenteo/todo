@@ -220,12 +220,36 @@ body {
 }
 
 .tag {
-  background-color: var(--tag-bg);
-  color: var(--tag-color);
   font-size: 0.7rem;
   padding: 2px 8px;
   border-radius: 12px;
   font-weight: 500;
+}
+
+.priority-Alto {
+  background-color: #ffdce0;
+  color: #cf222e;
+}
+.priority-Medio {
+  background-color: #fff8c5;
+  color: #9a6700;
+}
+.priority-Baixo {
+  background-color: #dafbe1;
+  color: #1a7f37;
+}
+
+[data-theme='dark'] .priority-Alto {
+  background-color: rgba(248, 81, 73, 0.15);
+  color: #f85149;
+}
+[data-theme='dark'] .priority-Medio {
+  background-color: rgba(210, 153, 34, 0.15);
+  color: #d29922;
+}
+[data-theme='dark'] .priority-Baixo {
+  background-color: rgba(63, 185, 80, 0.15);
+  color: #3fb950;
 }
 
 .due-date, .created-date {
@@ -285,7 +309,7 @@ body {
 }
 
 .form-input {
-  background-color: transparent;
+  background-color: var(--card-bg);
   border: 1px solid var(--card-border);
   color: var(--foreground);
   padding: 0.6rem;

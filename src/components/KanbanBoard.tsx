@@ -39,7 +39,7 @@ export default function KanbanBoard() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeColumnId, setActiveColumnId] = useState<string | null>(null);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
-  const [formData, setFormData] = useState({ title: '', description: '', tags: '', due_date: '' });
+  const [formData, setFormData] = useState({ title: '', description: '', priority: 'Baixo', due_date: '' });
 
   useEffect(() => {
     fetchTasks();
@@ -135,7 +135,7 @@ export default function KanbanBoard() {
   const openAddTaskModal = (columnId: string) => {
     setActiveColumnId(columnId);
     setEditingTaskId(null);
-    setFormData({ title: '', description: '', tags: '', due_date: '' });
+    setFormData({ title: '', description: '', priority: 'Baixo', due_date: '' });
     setIsModalOpen(true);
   };
 
@@ -145,7 +145,7 @@ export default function KanbanBoard() {
     setFormData({ 
       title: task.title, 
       description: task.description || '', 
-      tags: task.tags?.join(', ') || '', 
+      priority: task.tags?.[0] || 'Baixo', 
       due_date: task.due_date || '' 
     });
     setIsModalOpen(true);
@@ -157,7 +157,7 @@ export default function KanbanBoard() {
 
     setIsModalOpen(false); // Close immediately for optimistic feel
     const position = data ? data.columns[activeColumnId].taskIds.length : 0;
-    const parsedTags = formData.tags.split(',').map(t => t.trim()).filter(Boolean);
+    const priorityArray = [formData.priority];
 
     if (editingTaskId) {
       const { data: updatedData, error } = await supabase
@@ -165,7 +165,7 @@ export default function KanbanBoard() {
         .update({
           title: formData.title,
           description: formData.description,
-          tags: parsedTags,
+          tags: priorityArray,
           due_date: formData.due_date || null
         })
         .eq('id', editingTaskId)
@@ -190,7 +190,7 @@ export default function KanbanBoard() {
           description: formData.description, 
           column_id: activeColumnId, 
           position,
-          tags: parsedTags,
+          tags: priorityArray,
           due_date: formData.due_date || null
         }])
         .select();
@@ -322,9 +322,9 @@ export default function KanbanBoard() {
                                 <div className="card-title">{task.title}</div>
                                 {task.tags?.length > 0 && (
                                   <div className="tag-list">
-                                    {task.tags.map((tag, i) => (
-                                      <span key={i} className="tag">{tag}</span>
-                                    ))}
+                                    <span className={`tag priority-${task.tags[0].replace('é', 'e')}`}>
+                                      {task.tags[0]}
+                                    </span>
                                   </div>
                                 )}
                                 <div className="edit-btn" onClick={() => openEditTaskModal(task)} title="Editar Tarefa">
@@ -386,14 +386,16 @@ export default function KanbanBoard() {
                 />
               </div>
               <div className="form-group">
-                <label>Etiquetas (separadas por vírgula)</label>
-                <input 
-                  type="text" 
+                <label>Prioridade</label>
+                <select 
                   className="form-input" 
-                  placeholder="ex: urgente, bug, ui"
-                  value={formData.tags}
-                  onChange={e => setFormData({...formData, tags: e.target.value})}
-                />
+                  value={formData.priority}
+                  onChange={e => setFormData({...formData, priority: e.target.value})}
+                >
+                  <option value="Alto">Alto</option>
+                  <option value="Médio">Médio</option>
+                  <option value="Baixo">Baixo</option>
+                </select>
               </div>
               <div className="form-group">
                 <label>Prazo (Opcional)</label>
