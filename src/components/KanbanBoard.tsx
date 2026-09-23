@@ -363,13 +363,6 @@ export default function KanbanBoard() {
                             >
                               <div className="card-header">
                                 <div className="card-title">{task.title}</div>
-                                {task.tags?.length > 0 && (
-                                  <div className="tag-list">
-                                    <span className={`tag priority-${task.tags[0].replace('é', 'e')}`}>
-                                      {task.tags[0]}
-                                    </span>
-                                  </div>
-                                )}
                                 <div className="edit-btn" onClick={() => openEditTaskModal(task)} title="Editar Tarefa">
                                   <Edit2 size={12} />
                                 </div>
@@ -380,12 +373,21 @@ export default function KanbanBoard() {
                                 <div className="created-date">
                                   {formatDate(task.created_at)}
                                 </div>
-                                {task.due_date && (
-                                  <div className={`due-date ${isOverdue(task.due_date) ? 'overdue' : ''}`}>
-                                    <Calendar size={12} />
-                                    {formatDate(task.due_date)}
+                                {task.tags?.length > 0 && (
+                                  <div className="tag-list">
+                                    <span className={`tag priority-${task.tags[0].replace('é', 'e')}`}>
+                                      {task.tags[0]}
+                                    </span>
                                   </div>
                                 )}
+                                <div className="due-date-wrapper">
+                                  {task.due_date && (
+                                    <div className={`due-date ${isOverdue(task.due_date) ? 'overdue' : ''}`}>
+                                      <Calendar size={12} />
+                                      {formatDate(task.due_date)}
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           )}

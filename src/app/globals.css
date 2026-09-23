@@ -169,8 +169,8 @@ body {
 }
 
 .card-footer {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
   margin-top: 0.25rem;
   padding-top: 0.25rem;
@@ -181,8 +181,13 @@ body {
   display: flex;
   flex-wrap: wrap;
   gap: 0.25rem;
-  justify-content: flex-end;
+  justify-content: center;
   transition: opacity 0.2s ease;
+}
+
+.due-date-wrapper {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .edit-btn {
