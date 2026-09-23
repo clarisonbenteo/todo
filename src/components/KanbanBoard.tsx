@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
-import { Plus, MoreHorizontal, Calendar } from 'lucide-react';
+import { Plus, MoreHorizontal, Calendar, Edit2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 type Task = { 
@@ -38,6 +38,7 @@ export default function KanbanBoard() {
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeColumnId, setActiveColumnId] = useState<string | null>(null);
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [formData, setFormData] = useState({ title: '', description: '', tags: '', due_date: '' });
 
   useEffect(() => {
@@ -133,7 +134,20 @@ export default function KanbanBoard() {
 
   const openAddTaskModal = (columnId: string) => {
     setActiveColumnId(columnId);
+    setEditingTaskId(null);
     setFormData({ title: '', description: '', tags: '', due_date: '' });
+    setIsModalOpen(true);
+  };
+
+  const openEditTaskModal = (task: Task) => {
+    setActiveColumnId(task.column_id);
+    setEditingTaskId(task.id);
+    setFormData({ 
+      title: task.title, 
+      description: task.description || '', 
+      tags: task.tags?.join(', ') || '', 
+      due_date: task.due_date || '' 
+    });
     setIsModalOpen(true);
   };
 
@@ -145,40 +159,65 @@ export default function KanbanBoard() {
     const position = data ? data.columns[activeColumnId].taskIds.length : 0;
     const parsedTags = formData.tags.split(',').map(t => t.trim()).filter(Boolean);
 
-    const { data: insertedData, error } = await supabase
-      .from('todo_tasks')
-      .insert([{ 
-        title: formData.title, 
-        description: formData.description, 
-        column_id: activeColumnId, 
-        position,
-        tags: parsedTags,
-        due_date: formData.due_date || null
-      }])
-      .select();
+    if (editingTaskId) {
+      const { data: updatedData, error } = await supabase
+        .from('todo_tasks')
+        .update({
+          title: formData.title,
+          description: formData.description,
+          tags: parsedTags,
+          due_date: formData.due_date || null
+        })
+        .eq('id', editingTaskId)
+        .select();
 
-    if (error) {
-      console.error('Error adding task:', error);
-      alert('Erro ao salvar no Supabase: ' + error.message);
-      return;
-    }
+      if (error) {
+        alert('Erro ao atualizar no Supabase: ' + error.message);
+        return;
+      }
+      if (updatedData && updatedData.length > 0 && data) {
+        const updatedTask = { ...updatedData[0], tags: updatedData[0].tags || [] };
+        setData({
+          ...data,
+          tasks: { ...data.tasks, [updatedTask.id]: updatedTask }
+        });
+      }
+    } else {
+      const { data: insertedData, error } = await supabase
+        .from('todo_tasks')
+        .insert([{ 
+          title: formData.title, 
+          description: formData.description, 
+          column_id: activeColumnId, 
+          position,
+          tags: parsedTags,
+          due_date: formData.due_date || null
+        }])
+        .select();
 
-    if (!insertedData || insertedData.length === 0) {
-      alert('A tarefa foi enviada, mas o Supabase não retornou os dados. Verifique se a Policy (RLS) tem permissão de INSERT e SELECT.');
-      return;
-    }
+      if (error) {
+        console.error('Error adding task:', error);
+        alert('Erro ao salvar no Supabase: ' + error.message);
+        return;
+      }
 
-    if (insertedData && insertedData.length > 0 && data) {
-      const newTask = { ...insertedData[0], tags: insertedData[0].tags || [] };
-      const column = data.columns[activeColumnId];
-      const newTaskIds = Array.from(column.taskIds);
-      newTaskIds.push(newTask.id);
+      if (!insertedData || insertedData.length === 0) {
+        alert('A tarefa foi enviada, mas o Supabase não retornou os dados. Verifique se a Policy (RLS) tem permissão de INSERT e SELECT.');
+        return;
+      }
 
-      setData({
-        ...data,
-        tasks: { ...data.tasks, [newTask.id]: newTask },
-        columns: { ...data.columns, [activeColumnId]: { ...column, taskIds: newTaskIds } },
-      });
+      if (insertedData && insertedData.length > 0 && data) {
+        const newTask = { ...insertedData[0], tags: insertedData[0].tags || [] };
+        const column = data.columns[activeColumnId];
+        const newTaskIds = Array.from(column.taskIds);
+        newTaskIds.push(newTask.id);
+
+        setData({
+          ...data,
+          tasks: { ...data.tasks, [newTask.id]: newTask },
+          columns: { ...data.columns, [activeColumnId]: { ...column, taskIds: newTaskIds } },
+        });
+      }
     }
   };
 
@@ -288,6 +327,9 @@ export default function KanbanBoard() {
                                     ))}
                                   </div>
                                 )}
+                                <div className="edit-btn" onClick={() => openEditTaskModal(task)} title="Editar Tarefa">
+                                  <Edit2 size={12} />
+                                </div>
                               </div>
                               {task.description && <div className="card-desc">{task.description}</div>}
                               
@@ -319,7 +361,7 @@ export default function KanbanBoard() {
       {isModalOpen && (
         <div className="modal-overlay" onClick={() => setIsModalOpen(false)}>
           <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <h2 className="modal-title">Nova Tarefa</h2>
+            <h2 className="modal-title">{editingTaskId ? 'Editar Tarefa' : 'Nova Tarefa'}</h2>
             <form onSubmit={submitNewTask}>
               <div className="form-group">
                 <label>Título</label>
