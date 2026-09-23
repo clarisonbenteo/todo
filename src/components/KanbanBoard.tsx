@@ -31,6 +31,16 @@ const initialColumns = {
 };
 const columnOrder = ['col-1', 'col-2', 'col-3', 'col-4', 'col-5'];
 
+const priorityWeight: Record<string, number> = { 'Alto': 3, 'Médio': 2, 'Baixo': 1 };
+
+const sortTaskIds = (taskIds: string[], tasksObj: Record<string, Task>) => {
+  return [...taskIds].sort((a, b) => {
+    const pA = priorityWeight[tasksObj[a]?.tags?.[0] || 'Baixo'] || 1;
+    const pB = priorityWeight[tasksObj[b]?.tags?.[0] || 'Baixo'] || 1;
+    return pB - pA;
+  });
+};
+
 export default function KanbanBoard() {
   const [data, setData] = useState<BoardData | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -69,6 +79,10 @@ export default function KanbanBoard() {
       }
     });
 
+    Object.values(colsObj).forEach((col: any) => {
+      col.taskIds = sortTaskIds(col.taskIds, tasksObj);
+    });
+
     setData({ tasks: tasksObj, columns: colsObj, columnOrder });
   };
 
@@ -83,9 +97,11 @@ export default function KanbanBoard() {
     const finishColumn = data.columns[destination.droppableId];
 
     if (startColumn === finishColumn) {
-      const newTaskIds = Array.from(startColumn.taskIds);
+      let newTaskIds = Array.from(startColumn.taskIds);
       newTaskIds.splice(source.index, 1);
       newTaskIds.splice(destination.index, 0, draggableId);
+
+      newTaskIds = sortTaskIds(newTaskIds, data.tasks);
 
       const newColumn = { ...startColumn, taskIds: newTaskIds };
       setData({ ...data, columns: { ...data.columns, [newColumn.id]: newColumn } });
@@ -98,12 +114,14 @@ export default function KanbanBoard() {
     }
 
     // Moving to another column
-    const startTaskIds = Array.from(startColumn.taskIds);
+    let startTaskIds = Array.from(startColumn.taskIds);
     startTaskIds.splice(source.index, 1);
+    startTaskIds = sortTaskIds(startTaskIds, data.tasks);
     const newStart = { ...startColumn, taskIds: startTaskIds };
 
-    const finishTaskIds = Array.from(finishColumn.taskIds);
+    let finishTaskIds = Array.from(finishColumn.taskIds);
     finishTaskIds.splice(destination.index, 0, draggableId);
+    finishTaskIds = sortTaskIds(finishTaskIds, data.tasks);
     const newFinish = { ...finishColumn, taskIds: finishTaskIds };
 
     setData({
@@ -177,9 +195,17 @@ export default function KanbanBoard() {
       }
       if (updatedData && updatedData.length > 0 && data) {
         const updatedTask = { ...updatedData[0], tags: updatedData[0].tags || [] };
+        const updatedTasks = { ...data.tasks, [updatedTask.id]: updatedTask };
+        
+        const columnId = updatedTask.column_id;
+        const column = data.columns[columnId];
+        let newTaskIds = Array.from(column.taskIds);
+        newTaskIds = sortTaskIds(newTaskIds, updatedTasks);
+
         setData({
           ...data,
-          tasks: { ...data.tasks, [updatedTask.id]: updatedTask }
+          tasks: updatedTasks,
+          columns: { ...data.columns, [columnId]: { ...column, taskIds: newTaskIds } }
         });
       }
     } else {
@@ -209,12 +235,15 @@ export default function KanbanBoard() {
       if (insertedData && insertedData.length > 0 && data) {
         const newTask = { ...insertedData[0], tags: insertedData[0].tags || [] };
         const column = data.columns[activeColumnId];
-        const newTaskIds = Array.from(column.taskIds);
+        let newTaskIds = Array.from(column.taskIds);
         newTaskIds.push(newTask.id);
+        
+        const updatedTasks = { ...data.tasks, [newTask.id]: newTask };
+        newTaskIds = sortTaskIds(newTaskIds, updatedTasks);
 
         setData({
           ...data,
-          tasks: { ...data.tasks, [newTask.id]: newTask },
+          tasks: updatedTasks,
           columns: { ...data.columns, [activeColumnId]: { ...column, taskIds: newTaskIds } },
         });
       }
