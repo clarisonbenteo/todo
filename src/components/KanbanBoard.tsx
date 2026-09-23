@@ -158,6 +158,12 @@ export default function KanbanBoard() {
 
     if (error) {
       console.error('Error adding task:', error);
+      alert('Erro ao salvar no Supabase: ' + error.message);
+      return;
+    }
+
+    if (!insertedData || insertedData.length === 0) {
+      alert('A tarefa foi enviada, mas o Supabase não retornou os dados. Verifique se a Policy (RLS) tem permissão de INSERT e SELECT.');
       return;
     }
 
