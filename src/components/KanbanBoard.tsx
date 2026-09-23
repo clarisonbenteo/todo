@@ -24,6 +24,7 @@ const columnOrder = ['col-1', 'col-2', 'col-3', 'col-4', 'col-5'];
 
 export default function KanbanBoard() {
   const [data, setData] = useState<BoardData | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
     fetchTasks();
@@ -37,6 +38,7 @@ export default function KanbanBoard() {
 
     if (error) {
       console.error('Error fetching tasks:', error);
+      setErrorMsg(`Erro de conexão com Supabase: ${error.message}. Certifique-se de que a tabela 'todo_tasks' foi criada.`);
       return;
     }
 
@@ -164,6 +166,28 @@ export default function KanbanBoard() {
       });
     }
   };
+
+  if (errorMsg) {
+    return (
+      <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+        <h2>⚠️ Falha ao carregar o quadro</h2>
+        <p style={{ marginTop: '1rem', color: '#ff5555' }}>{errorMsg}</p>
+        <p style={{ marginTop: '1rem' }}>
+          Para criar a tabela, acesse o seu Supabase (projeto evolucao-financeira), vá em <strong>SQL Editor</strong> e rode:
+        </p>
+        <pre style={{ background: 'var(--card-bg)', padding: '1rem', marginTop: '1rem', textAlign: 'left', display: 'inline-block', borderRadius: '6px' }}>
+{`create table public.todo_tasks (
+  id uuid default gen_random_uuid() primary key,
+  title text not null,
+  description text,
+  column_id text not null,
+  position integer not null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);`}
+        </pre>
+      </div>
+    );
+  }
 
   if (!data) return null; // Avoid hydration mismatch
 
