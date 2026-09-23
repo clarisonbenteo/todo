@@ -2,10 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
-import { v4 as uuidv4 } from 'uuid';
 import { Plus, MoreHorizontal } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
-type Task = { id: string; title: string; description: string };
+type Task = { id: string; title: string; description: string; column_id: string; position: number };
 type Column = { id: string; title: string; color: string; taskIds: string[] };
 type BoardData = {
   tasks: Record<string, Task>;
@@ -13,44 +13,47 @@ type BoardData = {
   columnOrder: string[];
 };
 
-const initialData: BoardData = {
-  tasks: {
-    'task-1': { id: 'task-1', title: 'Definir arquitetura inicial', description: 'Criar repositório e base do projeto.' },
-    'task-2': { id: 'task-2', title: 'Revisar layout', description: 'Aplicar cores do HIG.' },
-  },
-  columns: {
-    'col-1': { id: 'col-1', title: 'Backlog', color: 'var(--color-backlog)', taskIds: ['task-1'] },
-    'col-2': { id: 'col-2', title: 'Ready', color: 'var(--color-ready)', taskIds: ['task-2'] },
-    'col-3': { id: 'col-3', title: 'In progress', color: 'var(--color-in-progress)', taskIds: [] },
-    'col-4': { id: 'col-4', title: 'In review', color: 'var(--color-in-review)', taskIds: [] },
-    'col-5': { id: 'col-5', title: 'Done', color: 'var(--color-done)', taskIds: [] },
-  },
-  columnOrder: ['col-1', 'col-2', 'col-3', 'col-4', 'col-5'],
+const initialColumns = {
+  'col-1': { id: 'col-1', title: 'Backlog', color: 'var(--color-backlog)', taskIds: [] },
+  'col-2': { id: 'col-2', title: 'Ready', color: 'var(--color-ready)', taskIds: [] },
+  'col-3': { id: 'col-3', title: 'In progress', color: 'var(--color-in-progress)', taskIds: [] },
+  'col-4': { id: 'col-4', title: 'In review', color: 'var(--color-in-review)', taskIds: [] },
+  'col-5': { id: 'col-5', title: 'Done', color: 'var(--color-done)', taskIds: [] },
 };
+const columnOrder = ['col-1', 'col-2', 'col-3', 'col-4', 'col-5'];
 
 export default function KanbanBoard() {
   const [data, setData] = useState<BoardData | null>(null);
 
   useEffect(() => {
-    const saved = localStorage.getItem('todo-kanban-state');
-    if (saved) {
-      try {
-        setData(JSON.parse(saved));
-      } catch {
-        setData(initialData);
-      }
-    } else {
-      setData(initialData);
-    }
+    fetchTasks();
   }, []);
 
-  useEffect(() => {
-    if (data) {
-      localStorage.setItem('todo-kanban-state', JSON.stringify(data));
-    }
-  }, [data]);
+  const fetchTasks = async () => {
+    const { data: dbTasks, error } = await supabase
+      .from('todo_tasks')
+      .select('*')
+      .order('position', { ascending: true });
 
-  const onDragEnd = (result: DropResult) => {
+    if (error) {
+      console.error('Error fetching tasks:', error);
+      return;
+    }
+
+    const tasksObj: Record<string, Task> = {};
+    const colsObj = JSON.parse(JSON.stringify(initialColumns)); // deep copy
+
+    (dbTasks || []).forEach((t) => {
+      tasksObj[t.id] = t;
+      if (colsObj[t.column_id]) {
+        colsObj[t.column_id].taskIds.push(t.id);
+      }
+    });
+
+    setData({ tasks: tasksObj, columns: colsObj, columnOrder });
+  };
+
+  const onDragEnd = async (result: DropResult) => {
     const { destination, source, draggableId } = result;
 
     if (!destination) return;
@@ -66,9 +69,11 @@ export default function KanbanBoard() {
       newTaskIds.splice(destination.index, 0, draggableId);
 
       const newColumn = { ...startColumn, taskIds: newTaskIds };
-      setData({
-        ...data,
-        columns: { ...data.columns, [newColumn.id]: newColumn },
+      setData({ ...data, columns: { ...data.columns, [newColumn.id]: newColumn } });
+
+      // Update positions in DB
+      newTaskIds.forEach(async (id, idx) => {
+        await supabase.from('todo_tasks').update({ position: idx }).eq('id', id);
       });
       return;
     }
@@ -90,28 +95,72 @@ export default function KanbanBoard() {
         [newFinish.id]: newFinish,
       },
     });
+
+    // Update moved task column and position
+    await supabase.from('todo_tasks').update({ 
+      column_id: finishColumn.id,
+      position: destination.index
+    }).eq('id', draggableId);
+
+    // Update positions in start column
+    startTaskIds.forEach(async (id, idx) => {
+      await supabase.from('todo_tasks').update({ position: idx }).eq('id', id);
+    });
+
+    // Update positions in finish column
+    finishTaskIds.forEach(async (id, idx) => {
+      await supabase.from('todo_tasks').update({ position: idx }).eq('id', id);
+    });
   };
 
-  const addNewTask = (columnId: string) => {
+  const addNewTask = async (columnId: string) => {
     const title = prompt('Título da Tarefa:');
     if (!title) return;
     
     const description = prompt('Descrição (opcional):') || '';
-    const newTaskId = `task-${uuidv4()}`;
-    const newTask = { id: newTaskId, title, description };
+    
+    const position = data ? data.columns[columnId].taskIds.length : 0;
 
-    if (data) {
+    const { data: insertedData, error } = await supabase
+      .from('todo_tasks')
+      .insert([{ title, description, column_id: columnId, position }])
+      .select();
+
+    if (error) {
+      console.error('Error adding task:', error);
+      return;
+    }
+
+    if (insertedData && insertedData.length > 0 && data) {
+      const newTask = insertedData[0];
       const column = data.columns[columnId];
       const newTaskIds = Array.from(column.taskIds);
-      newTaskIds.push(newTaskId);
+      newTaskIds.push(newTask.id);
 
       setData({
         ...data,
-        tasks: { ...data.tasks, [newTaskId]: newTask },
-        columns: {
-          ...data.columns,
-          [columnId]: { ...column, taskIds: newTaskIds },
-        },
+        tasks: { ...data.tasks, [newTask.id]: newTask },
+        columns: { ...data.columns, [columnId]: { ...column, taskIds: newTaskIds } },
+      });
+    }
+  };
+
+  const deleteTask = async (taskId: string, columnId: string) => {
+    if (!confirm('Excluir tarefa?')) return;
+    
+    await supabase.from('todo_tasks').delete().eq('id', taskId);
+    
+    if (data) {
+      const newTasks = { ...data.tasks };
+      delete newTasks[taskId];
+      
+      const column = data.columns[columnId];
+      const newTaskIds = column.taskIds.filter(id => id !== taskId);
+      
+      setData({
+        ...data,
+        tasks: newTasks,
+        columns: { ...data.columns, [columnId]: { ...column, taskIds: newTaskIds } }
       });
     }
   };
@@ -145,11 +194,7 @@ export default function KanbanBoard() {
 
               <Droppable droppableId={column.id}>
                 {(provided) => (
-                  <div
-                    className="task-list"
-                    ref={provided.innerRef}
-                    {...provided.droppableProps}
-                  >
+                  <div className="task-list" ref={provided.innerRef} {...provided.droppableProps}>
                     {tasks.map((task, index) => (
                       <Draggable key={task.id} draggableId={task.id} index={index}>
                         {(provided, snapshot) => (
@@ -158,6 +203,8 @@ export default function KanbanBoard() {
                             ref={provided.innerRef}
                             {...provided.draggableProps}
                             {...provided.dragHandleProps}
+                            onDoubleClick={() => deleteTask(task.id, column.id)}
+                            title="Duplo clique para excluir"
                             style={{
                               ...provided.draggableProps.style,
                               borderColor: snapshot.isDragging ? 'var(--card-hover-border)' : 'var(--card-border)',
