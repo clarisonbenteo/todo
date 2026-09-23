@@ -274,13 +274,27 @@ export default function KanbanBoard() {
     if (!dateString) return false;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const date = new Date(dateString);
-    date.setHours(0, 0, 0, 0);
+    
+    let date;
+    if (dateString.length === 10) {
+      const [year, month, day] = dateString.split('-');
+      date = new Date(Number(year), Number(month) - 1, Number(day));
+    } else {
+      date = new Date(dateString);
+      date.setHours(0, 0, 0, 0);
+    }
+    
     return date < today;
   };
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return '';
+    
+    if (dateString.length === 10) {
+      const [year, month, day] = dateString.split('-');
+      return `${day}/${month}`;
+    }
+
     const date = new Date(dateString);
     const day = String(date.getDate()).padStart(2, '0');
     const month = String(date.getMonth() + 1).padStart(2, '0');
