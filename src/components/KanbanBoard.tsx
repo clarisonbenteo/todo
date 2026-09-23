@@ -2,10 +2,18 @@
 
 import React, { useState, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
-import { Plus, MoreHorizontal } from 'lucide-react';
+import { Plus, MoreHorizontal, Calendar } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
-type Task = { id: string; title: string; description: string; column_id: string; position: number };
+type Task = { 
+  id: string; 
+  title: string; 
+  description: string; 
+  column_id: string; 
+  position: number;
+  tags: string[];
+  due_date: string | null;
+};
 type Column = { id: string; title: string; color: string; taskIds: string[] };
 type BoardData = {
   tasks: Record<string, Task>;
@@ -25,6 +33,11 @@ const columnOrder = ['col-1', 'col-2', 'col-3', 'col-4', 'col-5'];
 export default function KanbanBoard() {
   const [data, setData] = useState<BoardData | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  
+  // Modal State
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [activeColumnId, setActiveColumnId] = useState<string | null>(null);
+  const [formData, setFormData] = useState({ title: '', description: '', tags: '', due_date: '' });
 
   useEffect(() => {
     fetchTasks();
@@ -38,7 +51,7 @@ export default function KanbanBoard() {
 
     if (error) {
       console.error('Error fetching tasks:', error);
-      setErrorMsg(`Erro de conexão com Supabase: ${error.message}. Certifique-se de que a tabela 'todo_tasks' foi criada.`);
+      setErrorMsg(`Erro de conexão com Supabase: ${error.message}. Certifique-se de que a tabela 'todo_tasks' foi criada com as colunas corretas.`);
       return;
     }
 
@@ -46,7 +59,9 @@ export default function KanbanBoard() {
     const colsObj = JSON.parse(JSON.stringify(initialColumns)); // deep copy
 
     (dbTasks || []).forEach((t) => {
-      tasksObj[t.id] = t;
+      // Ensure tags is an array
+      const taskWithDefaults = { ...t, tags: t.tags || [] };
+      tasksObj[t.id] = taskWithDefaults;
       if (colsObj[t.column_id]) {
         colsObj[t.column_id].taskIds.push(t.id);
       }
@@ -115,17 +130,30 @@ export default function KanbanBoard() {
     });
   };
 
-  const addNewTask = async (columnId: string) => {
-    const title = prompt('Título da Tarefa:');
-    if (!title) return;
-    
-    const description = prompt('Descrição (opcional):') || '';
-    
-    const position = data ? data.columns[columnId].taskIds.length : 0;
+  const openAddTaskModal = (columnId: string) => {
+    setActiveColumnId(columnId);
+    setFormData({ title: '', description: '', tags: '', due_date: '' });
+    setIsModalOpen(true);
+  };
+
+  const submitNewTask = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.title.trim() || !activeColumnId) return;
+
+    setIsModalOpen(false); // Close immediately for optimistic feel
+    const position = data ? data.columns[activeColumnId].taskIds.length : 0;
+    const parsedTags = formData.tags.split(',').map(t => t.trim()).filter(Boolean);
 
     const { data: insertedData, error } = await supabase
       .from('todo_tasks')
-      .insert([{ title, description, column_id: columnId, position }])
+      .insert([{ 
+        title: formData.title, 
+        description: formData.description, 
+        column_id: activeColumnId, 
+        position,
+        tags: parsedTags,
+        due_date: formData.due_date || null
+      }])
       .select();
 
     if (error) {
@@ -134,15 +162,15 @@ export default function KanbanBoard() {
     }
 
     if (insertedData && insertedData.length > 0 && data) {
-      const newTask = insertedData[0];
-      const column = data.columns[columnId];
+      const newTask = { ...insertedData[0], tags: insertedData[0].tags || [] };
+      const column = data.columns[activeColumnId];
       const newTaskIds = Array.from(column.taskIds);
       newTaskIds.push(newTask.id);
 
       setData({
         ...data,
         tasks: { ...data.tasks, [newTask.id]: newTask },
-        columns: { ...data.columns, [columnId]: { ...column, taskIds: newTaskIds } },
+        columns: { ...data.columns, [activeColumnId]: { ...column, taskIds: newTaskIds } },
       });
     }
   };
@@ -167,24 +195,28 @@ export default function KanbanBoard() {
     }
   };
 
+  const isOverdue = (dateString: string | null) => {
+    if (!dateString) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const date = new Date(dateString);
+    date.setHours(0, 0, 0, 0);
+    return date < today;
+  };
+
+  const formatDate = (dateString: string) => {
+    const [year, month, day] = dateString.split('-');
+    return `${day}/${month}`;
+  };
+
   if (errorMsg) {
     return (
       <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
         <h2>⚠️ Falha ao carregar o quadro</h2>
         <p style={{ marginTop: '1rem', color: '#ff5555' }}>{errorMsg}</p>
         <p style={{ marginTop: '1rem' }}>
-          Para criar a tabela, acesse o seu Supabase (projeto evolucao-financeira), vá em <strong>SQL Editor</strong> e rode:
+          Você rodou a query <code>ALTER TABLE</code> no Supabase? (Projeto evolucao-financeira)
         </p>
-        <pre style={{ background: 'var(--card-bg)', padding: '1rem', marginTop: '1rem', textAlign: 'left', display: 'inline-block', borderRadius: '6px' }}>
-{`create table public.todo_tasks (
-  id uuid default gen_random_uuid() primary key,
-  title text not null,
-  description text,
-  column_id text not null,
-  position integer not null,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null
-);`}
-        </pre>
       </div>
     );
   }
@@ -192,64 +224,138 @@ export default function KanbanBoard() {
   if (!data) return null; // Avoid hydration mismatch
 
   return (
-    <div className="kanban-container">
-      <DragDropContext onDragEnd={onDragEnd}>
-        {data.columnOrder.map((columnId) => {
-          const column = data.columns[columnId];
-          const tasks = column.taskIds.map((taskId) => data.tasks[taskId]).filter(Boolean);
+    <>
+      <div className="kanban-container">
+        <DragDropContext onDragEnd={onDragEnd}>
+          {data.columnOrder.map((columnId) => {
+            const column = data.columns[columnId];
+            const tasks = column.taskIds.map((taskId) => data.tasks[taskId]).filter(Boolean);
 
-          return (
-            <div key={column.id} className="kanban-column">
-              <div className="column-header">
-                <div className="column-header-left">
-                  <div className="status-circle" style={{ borderColor: column.color }} />
-                  <span>{column.title}</span>
-                  <span className="badge">{tasks.length}</span>
-                </div>
-                <div style={{ display: 'flex', gap: '0.25rem' }}>
-                  <button onClick={() => addNewTask(column.id)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px' }}>
-                    <Plus size={16} />
-                  </button>
-                  <button style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px' }}>
-                    <MoreHorizontal size={16} />
-                  </button>
-                </div>
-              </div>
-
-              <Droppable droppableId={column.id}>
-                {(provided) => (
-                  <div className="task-list" ref={provided.innerRef} {...provided.droppableProps}>
-                    {tasks.map((task, index) => (
-                      <Draggable key={task.id} draggableId={task.id} index={index}>
-                        {(provided, snapshot) => (
-                          <div
-                            className="task-card"
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            {...provided.dragHandleProps}
-                            onDoubleClick={() => deleteTask(task.id, column.id)}
-                            title="Duplo clique para excluir"
-                            style={{
-                              ...provided.draggableProps.style,
-                              borderColor: snapshot.isDragging ? 'var(--card-hover-border)' : 'var(--card-border)',
-                              boxShadow: snapshot.isDragging ? '0 8px 24px rgba(0,0,0,0.1)' : 'none',
-                              zIndex: snapshot.isDragging ? 100 : 1
-                            }}
-                          >
-                            <div className="card-title">{task.title}</div>
-                            {task.description && <div className="card-desc">{task.description}</div>}
-                          </div>
-                        )}
-                      </Draggable>
-                    ))}
-                    {provided.placeholder}
+            return (
+              <div key={column.id} className="kanban-column">
+                <div className="column-header">
+                  <div className="column-header-left">
+                    <div className="status-circle" style={{ borderColor: column.color }} />
+                    <span>{column.title}</span>
+                    <span className="badge">{tasks.length}</span>
                   </div>
-                )}
-              </Droppable>
-            </div>
-          );
-        })}
-      </DragDropContext>
-    </div>
+                  <div style={{ display: 'flex', gap: '0.25rem' }}>
+                    <button onClick={() => openAddTaskModal(column.id)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px' }}>
+                      <Plus size={16} />
+                    </button>
+                    <button style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px' }}>
+                      <MoreHorizontal size={16} />
+                    </button>
+                  </div>
+                </div>
+
+                <Droppable droppableId={column.id}>
+                  {(provided) => (
+                    <div className="task-list" ref={provided.innerRef} {...provided.droppableProps}>
+                      {tasks.map((task, index) => (
+                        <Draggable key={task.id} draggableId={task.id} index={index}>
+                          {(provided, snapshot) => (
+                            <div
+                              className="task-card"
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              {...provided.dragHandleProps}
+                              onDoubleClick={() => deleteTask(task.id, column.id)}
+                              title="Duplo clique para excluir"
+                              style={{
+                                ...provided.draggableProps.style,
+                                borderColor: snapshot.isDragging ? 'var(--card-hover-border)' : 'var(--card-border)',
+                                boxShadow: snapshot.isDragging ? '0 8px 24px rgba(0,0,0,0.1)' : 'none',
+                                zIndex: snapshot.isDragging ? 100 : 1
+                              }}
+                            >
+                              <div className="card-title">{task.title}</div>
+                              {task.description && <div className="card-desc">{task.description}</div>}
+                              
+                              {(task.tags?.length > 0 || task.due_date) && (
+                                <div className="card-footer">
+                                  <div className="tag-list">
+                                    {task.tags?.map((tag, i) => (
+                                      <span key={i} className="tag">{tag}</span>
+                                    ))}
+                                  </div>
+                                  {task.due_date && (
+                                    <div className={`due-date ${isOverdue(task.due_date) ? 'overdue' : ''}`}>
+                                      <Calendar size={12} />
+                                      {formatDate(task.due_date)}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </Draggable>
+                      ))}
+                      {provided.placeholder}
+                    </div>
+                  )}
+                </Droppable>
+              </div>
+            );
+          })}
+        </DragDropContext>
+      </div>
+
+      {isModalOpen && (
+        <div className="modal-overlay" onClick={() => setIsModalOpen(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <h2 className="modal-title">Nova Tarefa</h2>
+            <form onSubmit={submitNewTask}>
+              <div className="form-group">
+                <label>Título</label>
+                <input 
+                  type="text" 
+                  className="form-input" 
+                  required 
+                  autoFocus
+                  placeholder="Nome da tarefa"
+                  value={formData.title}
+                  onChange={e => setFormData({...formData, title: e.target.value})}
+                />
+              </div>
+              <div className="form-group">
+                <label>Descricão (Opcional)</label>
+                <textarea 
+                  className="form-input" 
+                  rows={3}
+                  placeholder="Detalhes adicionais"
+                  value={formData.description}
+                  onChange={e => setFormData({...formData, description: e.target.value})}
+                />
+              </div>
+              <div className="form-group">
+                <label>Etiquetas (separadas por vírgula)</label>
+                <input 
+                  type="text" 
+                  className="form-input" 
+                  placeholder="ex: urgente, bug, ui"
+                  value={formData.tags}
+                  onChange={e => setFormData({...formData, tags: e.target.value})}
+                />
+              </div>
+              <div className="form-group">
+                <label>Prazo (Opcional)</label>
+                <input 
+                  type="date" 
+                  className="form-input" 
+                  value={formData.due_date}
+                  onChange={e => setFormData({...formData, due_date: e.target.value})}
+                />
+              </div>
+              
+              <div className="modal-actions">
+                <button type="button" className="btn btn-secondary" onClick={() => setIsModalOpen(false)}>Cancelar</button>
+                <button type="submit" className="btn btn-primary">Salvar</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
