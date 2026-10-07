@@ -266,14 +266,15 @@ export function Scratchpad() {
                     ) : (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                         <span>{tab.name}</span>
-                        <Save 
-                          size={12} 
-                          style={{ 
-                            color: syncStatus[tab.id] ? 'var(--color-ready)' : 'var(--text-muted)', 
-                            opacity: syncStatus[tab.id] ? 1 : 0.3 
-                          }} 
-                          title={syncStatus[tab.id] ? "Salvo" : "Salvando..."}
-                        />
+                        <span title={syncStatus[tab.id] ? "Salvo" : "Salvando..."} style={{ display: 'flex', alignItems: 'center' }}>
+                          <Save 
+                            size={12} 
+                            style={{ 
+                              color: syncStatus[tab.id] ? 'var(--color-ready)' : 'var(--text-muted)', 
+                              opacity: syncStatus[tab.id] ? 1 : 0.3 
+                            }} 
+                          />
+                        </span>
                       </div>
                     )}
                     {tabs.length > 1 && (
