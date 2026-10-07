@@ -13,7 +13,7 @@ export function LogoutButton() {
     }
   }, []);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     // Checagem de segurança global (definida pelo Scratchpad ou outros componentes)
     const hasUnsaved = (window as any).hasUnsavedChanges;
     
@@ -23,6 +23,10 @@ export function LogoutButton() {
       );
       if (!confirmLogout) return;
     }
+
+    // Desloga no Supabase para invalidar o token real
+    const { supabase } = await import('@/lib/supabase');
+    await supabase.auth.signOut();
 
     localStorage.removeItem('todo_user_session');
     window.location.href = '/login'; // Força redirecionamento limpando a memória do React
