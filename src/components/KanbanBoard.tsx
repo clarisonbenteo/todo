@@ -66,7 +66,8 @@ export default function KanbanBoard() {
     }
 
     if (!userId) {
-      setErrorMsg('Sessão Auth do Supabase não encontrada. Por favor, faça login novamente.');
+      localStorage.removeItem('todo_user_session');
+      window.location.href = '/login';
       return;
     }
 
