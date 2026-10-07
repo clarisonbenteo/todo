@@ -18,7 +18,7 @@ export default function Login() {
       const { data } = await supabase.auth.getSession();
       if (data.session) {
         localStorage.setItem('todo_user_session', data.session.user.id);
-        router.push('/');
+        window.location.href = '/';
       }
     };
     checkSession();
@@ -44,7 +44,7 @@ export default function Login() {
 
         if (data.session) {
           localStorage.setItem('todo_user_session', data.session.user.id);
-          router.push('/');
+          window.location.href = '/';
         } else {
           setErrorMessage("Login falhou: Nenhuma sessão foi criada.");
           setIsLoading(false);
@@ -63,7 +63,7 @@ export default function Login() {
 
         if (data.session) {
           localStorage.setItem('todo_user_session', data.session.user.id);
-          router.push('/');
+          window.location.href = '/';
         } else {
           setErrorMessage("Conta criada! Mas a sessão não foi iniciada. Se a Confirmação de E-mail estiver ativada no Supabase, verifique seu e-mail.");
           setIsLoading(false);
