@@ -56,9 +56,24 @@ export default function KanbanBoard() {
   }, []);
 
   const fetchTasks = async () => {
+    let { data: authData } = await supabase.auth.getSession();
+    let userId = authData.session?.user.id;
+    
+    // Fallback para forçar hidratação do Auth
+    if (!userId) {
+      const userRes = await supabase.auth.getUser();
+      userId = userRes.data.user?.id;
+    }
+
+    if (!userId) {
+      setErrorMsg('Sessão Auth do Supabase não encontrada. Por favor, faça login novamente.');
+      return;
+    }
+
     const { data: dbTasks, error } = await supabase
       .from('todo_tasks')
       .select('*')
+      .eq('user_id', userId)
       .order('position', { ascending: true });
 
     if (error) {
@@ -209,6 +224,10 @@ export default function KanbanBoard() {
         });
       }
     } else {
+      const { data: authData } = await supabase.auth.getSession();
+      const userId = authData.session?.user.id;
+      if (!userId) return;
+
       const { data: insertedData, error } = await supabase
         .from('todo_tasks')
         .insert([{ 
@@ -217,7 +236,8 @@ export default function KanbanBoard() {
           column_id: activeColumnId, 
           position,
           tags: priorityArray,
-          due_date: formData.due_date || null
+          due_date: formData.due_date || null,
+          user_id: userId
         }])
         .select();
 

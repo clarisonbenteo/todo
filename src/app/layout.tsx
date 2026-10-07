@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { Scratchpad } from '@/components/Scratchpad';
+import { LogoutButton } from '@/components/LogoutButton';
 
 export const metadata: Metadata = {
   title: 'TODO - Kanban Manager',
@@ -31,7 +33,11 @@ export default function RootLayout({
             padding: '0 2rem'
           }}>
             <h1 style={{ fontSize: '1.25rem', fontWeight: 600 }}>TO-DOs</h1>
-            <ThemeToggle />
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              <Scratchpad />
+              <ThemeToggle />
+              <LogoutButton />
+            </div>
           </header>
           {children}
         </ThemeProvider>

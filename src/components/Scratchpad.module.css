@@ -1,0 +1,305 @@
+.iconBtn {
+  background: transparent;
+  border: none;
+  color: var(--foreground);
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: var(--border-radius-card);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), background 0.2s;
+}
+
+.iconBtn:hover {
+  background: var(--card-bg);
+  transform: scale(1.2); 
+}
+
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--modal-overlay);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.2s ease-out forwards;
+}
+
+.modal {
+  width: 96vw;
+  max-width: 1600px;
+  height: 85vh;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  box-shadow: 0 24px 48px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.05) inset;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: springPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  transform-origin: top right;
+}
+
+/* === HEADER & TABS === */
+.header {
+  display: flex;
+  align-items: flex-end; /* Cola as abas na borda inferior */
+  justify-content: space-between;
+  padding: 0.5rem 0.5rem 0 0.5rem;
+  background: var(--column-bg);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.tabsContainer {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  overflow-x: auto;
+  flex: 1;
+}
+
+.tabsContainer::-webkit-scrollbar {
+  display: none;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: 8px 8px 0 0;
+  font-size: 0.85rem;
+  cursor: pointer;
+  border: 1px solid transparent;
+  border-bottom: none;
+  transition: all 0.2s;
+  user-select: none;
+  min-width: max-content;
+}
+
+.tab:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.activeTab {
+  background: var(--card-bg);
+  color: var(--foreground);
+  border-color: var(--border-color);
+  font-weight: 500;
+}
+
+.closeTabBtn {
+  background: transparent;
+  border: none;
+  color: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 50%;
+  padding: 2px;
+  opacity: 0.5;
+  transition: all 0.2s;
+}
+
+.closeTabBtn:hover {
+  opacity: 1;
+  background: rgba(248, 81, 73, 0.2);
+  color: #f85149;
+}
+
+.addTabBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 6px;
+  padding: 0.4rem;
+  margin-left: 0.25rem;
+  margin-bottom: 0.25rem;
+  transition: all 0.2s;
+}
+
+.addTabBtn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--foreground);
+}
+
+.closeModalBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  padding: 0.5rem;
+  margin-bottom: 0.25rem;
+  transition: all 0.2s;
+}
+
+.closeModalBtn:hover {
+  background: rgba(248, 81, 73, 0.1);
+  color: #f85149;
+}
+
+/* === TOOLBAR === */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 1rem;
+  background: var(--card-bg);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.toolBtn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 6px;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.toolBtn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--foreground);
+}
+
+.activeTool {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--foreground);
+  border-color: var(--border-color);
+}
+
+.toolbarDivider {
+  width: 1px;
+  height: 16px;
+  background: var(--border-color);
+  margin: 0 0.25rem;
+}
+
+/* === EDITOR === */
+.editorContainer {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  background: var(--card-bg);
+}
+
+.lineNumbers {
+  padding: 1.5rem 0.5rem;
+  background: var(--column-bg);
+  border-right: 1px solid var(--border-color);
+  color: var(--text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  text-align: right;
+  user-select: none;
+  overflow: hidden;
+  min-width: 3.5rem;
+}
+
+.lineNumber {
+  height: 1.6em;
+}
+
+.textarea {
+  flex: 1;
+  width: 100%;
+  padding: 1.5rem 1rem;
+  border: none;
+  background: transparent;
+  color: var(--foreground);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  resize: none;
+  outline: none;
+  white-space: pre;
+  overflow: auto;
+}
+
+.textarea::placeholder {
+  color: var(--text-muted);
+  font-style: italic;
+  font-family: var(--font-apple);
+}
+
+.textarea::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+.textarea::-webkit-scrollbar-track {
+  background: transparent;
+  border-left: 1px solid var(--border-color);
+}
+.textarea::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 6px;
+  border: 3px solid var(--card-bg);
+}
+.textarea::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* === FORMAT COLORS === */
+.jsonFormat {
+  color: var(--color-in-review);
+}
+
+.sqlFormat {
+  color: var(--color-ready);
+}
+
+@keyframes springPop {
+  0% {
+    opacity: 0;
+    transform: scale(0.3) translateY(-100px) translateX(100px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0) translateX(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.tabInput {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--foreground);
+  font-family: inherit;
+  font-size: 0.85rem;
+  width: 70px;
+  border-radius: 4px;
+  padding: 0 4px;
+  outline: none;
+}
+.tabInput:focus {
+  border-color: #3b82f6; /* Azul moderno */
+}
